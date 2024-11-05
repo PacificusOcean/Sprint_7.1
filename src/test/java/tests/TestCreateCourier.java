@@ -3,52 +3,50 @@ package tests;
 import io.qameta.allure.Step;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
-import jdk.jfr.Description;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import io.qameta.allure.junit4.DisplayName;
-import pojo.CreateCourier;
 
-import java.util.Random;
+import com.github.javafaker.Faker;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
 @DisplayName("POST /api/v1/courier | Создание нового курьера")
 public class TestCreateCourier {
-    private CreateCourier courier;
+
+
     private String login;
     private String password;
+    private Faker faker;
+    private Map<String, String> courier;
+    private String firstName;
+
 
     @Before
     public void setUp() {
         RestAssured.baseURI = "https://qa-scooter.praktikum-services.ru";
-        login = generateRandomLogin();
-        password = generateRandomPassword();
-        courier = new CreateCourier(login, password, "saske");
+        faker = new Faker();
+
+        // Инициализируем Map с данными курьера
+        courier = new HashMap<>();
+
+        login = faker.name().firstName();
+        password = faker.internet().password();
+        firstName = faker.name().firstName();
+
+        courier.put("login", login);
+        courier.put("password", password);
+        courier.put("firstName", firstName);
     }
 
-    // Функции для генерации случайных данных
-    private String generateRandomLogin() {
-        Random random = new Random();
-        return "login_" + random.nextInt(100000);
-    }
 
-    private String generateRandomPassword() {
-        Random random = new Random();
-        //Генерируем случайный пароль из 8 символов.
-        String lettersAndNumbers = "12345678";
-        StringBuilder password = new StringBuilder();
-        for (int i = 0; i < 4; i++) {
-            int randomIndex = random.nextInt(lettersAndNumbers.length());
-            password.append(lettersAndNumbers.charAt(randomIndex));
-        }
-        return password.toString();
-    }
     @Test
     @DisplayName("Успешное создание учётной записи")
-    @Description( "Успех — это движение от неудачи к неудаче без потери энтузиазма")
     public void createCourierTest() {
         createCourier(courier)
                 .then()
@@ -57,50 +55,45 @@ public class TestCreateCourier {
                 .body("ok", equalTo(true));
     }
 
+
     @Test
     @DisplayName("Курьер не создается при пустом логине")
-    @Description( "Мир жалок лишь для жалкого человека, мир пуст лишь для пустого человека")
     public void createCourierEmptyLoginTest() {
-        courier.setLogin("");
+        courier.put("login", "");
         createCourier(courier)
                 .then()
                 .statusCode(400)
                 .and()
                 .body("message", equalTo("Недостаточно данных для создания учетной записи"));
-        ;
     }
+
 
     @Test
     @DisplayName("Курьер не создается при пустом пароле")
-    @Description( "Меня видят, слышат, осязают, но внутри я пуст.")
     public void createCourierEmptyPasswordTest() {
-        courier.setPassword("");
+        courier.put("password", "");
         createCourier(courier)
                 .then()
                 .statusCode(400)
                 .and()
                 .body("message", equalTo("Недостаточно данных для создания учетной записи"));
-        ;
     }
 
     @Test
     @DisplayName("Курьер не создается при пустом имени")
-    @Description( "Что в имене тебе моём")
     public void createCourierEmptyFirstNameTest() {
-        courier.setFirstName("");
+        courier.put("firstName", "");
         createCourier(courier)
                 .then()
                 .statusCode(400)
                 .and()
                 .body("message", equalTo("Недостаточно данных для создания учетной записи"));
-        ;
     }
 
     @Test
     @DisplayName("Курьер не создается при отсутвии значения логина")
-    @Description( "И всё же описания очень важны")
     public void createCourierWithoutLoginTest() throws NullPointerException {
-        courier.setLogin(null);
+        courier.put("login", null);
         createCourier(courier)
                 .then()
                 .statusCode(400)
@@ -110,22 +103,19 @@ public class TestCreateCourier {
 
     @Test
     @DisplayName("Курьер не создается при отсутвии значения пароля")
-    @Description( "Сдесь будет описание теста")
     public void createCourierWithoutPasswordTest() throws NullPointerException {
-        courier.setPassword(null);
+        courier.put("password", null);
         createCourier(courier)
                 .then()
                 .statusCode(400)
                 .and()
                 .body("message", equalTo("Недостаточно данных для создания учетной записи"));
-        ;
     }
 
     @Test
     @DisplayName("Курьер не создается при отсутвии значения имени")
-    @Description( "Недостаточно данных, похоже тут закрался баг")
     public void createCourierWithoutFirstNameTest() throws NullPointerException {
-        courier.setFirstName(null);
+        courier.put("firstName", null);
         createCourier(courier)
                 .then()
                 .statusCode(400)
@@ -135,7 +125,6 @@ public class TestCreateCourier {
 
     @Test
     @DisplayName("Нельзя создать двух одинаковых курьеров")
-    @Description( "Одинаковые курьеры не катят")
     public void createCourierWithSameLoginTest() {
         createCourier(courier)
                 .then()
@@ -147,16 +136,14 @@ public class TestCreateCourier {
                 .body("message", equalTo("Этот логин уже используется"));
     }
 
-    @Step
-    @DisplayName("POST /api/v1/courier")
-    public Response createCourier(CreateCourier courier) {
+    @Step("POST /api/v1/courier")
+    public Response createCourier(Map<String, String> courier) {
         return given()
                 .header("Content-type", "application/json")
                 .body(courier)
                 .when()
                 .post("/api/v1/courier");
     }
-
     @After
     public void tearDown() {
         String loginBody = String.format("{\"login\":\"%s\",\"password\":\"%s\"}", login, password);
@@ -176,3 +163,7 @@ public class TestCreateCourier {
     }
 
 }
+
+
+
+
